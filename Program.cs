@@ -23,7 +23,7 @@ namespace recipeexport
 
             if (Directory.Exists(outPath))
             {
-                Directory.Delete(outPath, true); //"directory not empty" is the dumbest error ever
+                Directory.Delete(outPath, true);
             }
             Directory.CreateDirectory(outPath);
             Directory.CreateDirectory(Path.Combine(outPath, "images"));
@@ -41,13 +41,13 @@ namespace recipeexport
                     {
                         var recipe1Auth = JsonConvert.DeserializeObject<Recipe1Author>(File.ReadAllText(recipeText));
                         recipeObj = recipe1Auth;
-                        Authors = recipe1Auth.author?.name ?? "";
+                        Authors = recipe1Auth?.author?.name ?? "";
                     }
                     catch (Exception se)
                     {
                         var recipeMultiAuth = JsonConvert.DeserializeObject<RecipeMultiAuthor>(File.ReadAllText(recipeText));
                         recipeObj = recipeMultiAuth;
-                        if (recipeMultiAuth.author?.Length > 0)
+                        if (recipeMultiAuth?.author?.Length > 0)
                         {
                             Authors = string.Join(", ", recipeMultiAuth.author.Select(a => a.name));
                         }
@@ -70,8 +70,13 @@ namespace recipeexport
                     var imageFileName = recipeName + ".jpg";
                     foreach (var invalidChar in Path.GetInvalidFileNameChars())
                     {
-                        imageFileName = imageFileName.Replace(invalidChar, '_');
+                        imageFileName = imageFileName.Replace(invalidChar, '-');
                     }
+                    imageFileName = imageFileName
+                        .Replace(' ', '-')
+                        .Replace('(', '-')
+                        .Replace(')', '-')
+                        .Replace('\'', '-');
 
                     var recipeTextFilename = imageFileName.Substring(0, imageFileName.Length - 4) + ".md";
                     var image = Path.Combine(subdir, "full.jpg");
@@ -103,7 +108,7 @@ namespace recipeexport
                     sb.AppendLine("ingredients:");
                     foreach(var ing in recipeObj.recipeIngredient)
                     {
-                        sb.AppendLine($"- {ing}");
+                        sb.AppendLine($"- {SanitizeForMarkdown(ing)}");
                     }
                     sb.AppendLine();
 
@@ -112,7 +117,7 @@ namespace recipeexport
                     {
                         foreach(var inst in recipeObj.recipeInstructions)
                         {
-                            sb.AppendLine("- " + inst);
+                            sb.AppendLine("- " + SanitizeForMarkdown(inst));
                         }
                     }
                     else
@@ -145,6 +150,15 @@ namespace recipeexport
                 }
             }
             Console.WriteLine("done :)");
+        }
+
+        private static object SanitizeForMarkdown(string ing)
+        {
+            return ing
+                .Replace("\n", "\n   ")
+                .ReplaceLineEndings()
+                .Replace(">", "greater than ")
+                .Replace("<", "less than ");
         }
     }
 }
